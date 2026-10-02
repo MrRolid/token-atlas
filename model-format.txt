@@ -1,0 +1,34 @@
+Token Atlas v1 — model import format
+
+Select TWO files together: model.json and weights.bin. Import stays in browser memory until reload. It does not upload files to a server. GGUF, ONNX and safetensors are not supported.
+
+The JSON and BIN download links are working examples for the currently selected model.
+
+Required architecture: vocabulary = 1000, d = 48, heads = 4, layers = 2, context = 48, FFN = 96, pre-LayerNorm eps=1e-5, causal attention, tanh GELU, learned absolute position embedding, untied output projection.
+
+weights.bin: exactly 137320 little-endian float32 values (549280 bytes), all finite. Linear weights are row-major [output,input].
+
+model.json (max 2 MB):
+- d:48, heads:4, layers:2, context:48
+- vocab: 1000 unique nonempty strings (max 80 characters). First six: <pad>, <bos>, <eos>, <unk>, <q>, <a>.
+- offsets: each named tensor has {offset: integer float32 index, shape: integer array}. Tensors must cover the BIN exactly, with no overlap or gap.
+- emb.weight [1000,48], pos.weight [48,48]
+- blocks.0 and blocks.1, each with:
+  n1.weight, n1.bias, n2.weight, n2.bias [48]
+  qkv.weight [144,48], qkv.bias [144]
+  proj.weight [48,48], proj.bias [48]
+  fc.weight [96,48], fc.bias [96]
+  out.weight [48,96], out.bias [48]
+- norm.weight, norm.bias [48]
+- head.weight [1000,48], head.bias [1000]
+- coords: 1000 vectors with 3 finite values in [-10,10], normally PCA projected embedding coordinates scaled to radius 3
+- counts: 1000 nonnegative integer training counts
+- examples, steps: nonnegative integers
+- projectionVariance: finite fraction [0,1]
+- loss: nonempty array of [step,loss] finite numbers
+- examplesPrompt: nonempty array of strings, max 250 characters
+- seed: optional training seed
+
+Tokenizer: lowercase Unicode words/numbers/underscores and separate punctuation. Unknown tokens become <unk>. Prompt = <bos> <q> question tokens <a>. End token = <eos>. The inference engine does not import or execute code.
+
+Shape validation checks compatibility, not model quality or provenance. Uploaded statistics and PCA coordinates are supplied by the model author.
